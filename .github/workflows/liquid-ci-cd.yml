@@ -66,7 +66,7 @@ jobs:
       run: dotnet tool install --global dotnet-reportgenerator-globaltool
 
     - name: (CI/CD) Restore dependencies
-      run: dotnet restore src/Liquid.Cache.sln
+      run: dotnet restore src/Liquid.Cache/Liquid.Cache.csproj
 
     - name: (CI/CD) Build and Analyze Project
       env:
@@ -74,7 +74,7 @@ jobs:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       run: |
         dotnet sonarscanner begin /k:"Avanade_Liquid.Cache" /o:"avanade-1" /d:sonar.login="${{secrets.SONAR_TOKEN}}" /d:sonar.host.url="https://sonarcloud.io"
-        dotnet build src/Liquid.Cache.sln --configuration Release --no-restore
+        dotnet build src/Liquid.Cache/Liquid.Cache.csproj --configuration Release --no-restore
         dotnet sonarscanner end /d:sonar.login="${{secrets.SONAR_TOKEN}}"
     - name: (CD) Nuget Pack & Push to Nuget.org
       if: ${{ github.event_name == 'push' }}
