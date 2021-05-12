@@ -39,13 +39,7 @@ namespace Liquid.Cache.Memory
             }
         }
 
-        /// <summary>
-        /// Adds the specified object to cache.
-        /// </summary>
-        /// <typeparam name="TObject">The type of the object.</typeparam>
-        /// <param name="key">The cache entry key.</param>
-        /// <param name="obj">The object.</param>
-        /// <param name="expirationDuration">Duration of the expiration.</param>
+        /// <inheritdoc/>
         public async Task AddAsync<TObject>(string key, TObject obj, TimeSpan expirationDuration)
         {
             var telemetry = _telemetryFactory.GetTelemetry();
@@ -72,10 +66,7 @@ namespace Liquid.Cache.Memory
             }
         }
 
-        /// <summary>
-        /// Removes the specified cache entry.
-        /// </summary>
-        /// <param name="key">The key.</param>
+        /// <inheritdoc/>
         public async Task RemoveAsync(string key)
         {
             var telemetry = _telemetryFactory.GetTelemetry();
@@ -96,26 +87,19 @@ namespace Liquid.Cache.Memory
             }
         }
 
-        /// <summary>
-        /// Removes all cache entries.
-        /// </summary>
+        /// <inheritdoc/>
         public async Task RemoveAllAsync()
         {
             var telemetry = _telemetryFactory.GetTelemetry();
             try
             {
-                await Task.Run(() =>
-                {
-                    telemetry.AddContext("Cache_Memory");
-                    telemetry.StartTelemetryStopWatchMetric($"{nameof(RemoveAllAsync)}");
-                    if (_resetCacheToken != null && !_resetCacheToken.IsCancellationRequested && _resetCacheToken.Token.CanBeCanceled)
-                    {
-                        _resetCacheToken.Cancel();
-                        _resetCacheToken.Dispose();
-                    }
-                    _resetCacheToken = new CancellationTokenSource();
-                    telemetry.CollectTelemetryStopWatchMetric($"{nameof(RemoveAllAsync)}");
-                });
+
+                telemetry.AddContext("Cache_Memory");
+                telemetry.StartTelemetryStopWatchMetric($"{nameof(RemoveAllAsync)}");
+                var keys = await GetAllKeysAsync();
+                keys.Each((key) => _cache.Remove(key));
+                telemetry.CollectTelemetryStopWatchMetric($"{nameof(RemoveAllAsync)}");
+
             }
             catch (Exception ex)
             {
@@ -127,12 +111,7 @@ namespace Liquid.Cache.Memory
             }
         }
 
-        /// <summary>
-        /// Returns all keys from cache.
-        /// </summary>
-        /// <param name="pattern">the search pattern to return only keys that satisfies the condition.</param>
-        /// <returns></returns>
-        /// <exception cref="LightCacheException"></exception>
+        /// <inheritdoc/>
         public async Task<IEnumerable<string>> GetAllKeysAsync(string pattern = null)
         {
             var telemetry = _telemetryFactory.GetTelemetry();
@@ -145,9 +124,9 @@ namespace Liquid.Cache.Memory
                 {
                     telemetry.AddContext("Cache_Memory");
                     telemetry.StartTelemetryStopWatchMetric($"{nameof(GetAllKeysAsync)}_{pattern}");
-                    
+
                     if (!(entriesCollectionPropertyInfo?.GetValue(_cache) is ICollection collection)) return;
-                    
+
                     var keysCollection = (ReadOnlyCollection<object>)collection.ToDictionary()["Keys"];
                     var keys = pattern == null ? keysCollection.Cast<string>() : keysCollection.Cast<string>().Where(k => k.Contains(pattern));
 
@@ -166,11 +145,7 @@ namespace Liquid.Cache.Memory
             return returnKeys;
         }
 
-        /// <summary>
-        /// Check if cache entry key exists.
-        /// </summary>
-        /// <param name="key">The key.</param>
-        /// <returns></returns>
+        /// <inheritdoc/>
         public async Task<bool> ExistsAsync(string key)
         {
             var telemetry = _telemetryFactory.GetTelemetry();
@@ -195,14 +170,7 @@ namespace Liquid.Cache.Memory
             }
         }
 
-        /// <summary>
-        /// Retrieves the specified object from cache.
-        /// </summary>
-        /// <typeparam name="TObject">The type of the object.</typeparam>
-        /// <param name="key">The cache entry key.</param>
-        /// <returns>
-        /// the object in cache.
-        /// </returns>
+        /// <inheritdoc/>
         public async Task<TObject> RetrieveAsync<TObject>(string key)
         {
             var telemetry = _telemetryFactory.GetTelemetry();
@@ -216,42 +184,6 @@ namespace Liquid.Cache.Memory
                     telemetry.CollectTelemetryStopWatchMetric($"{nameof(RetrieveAsync)}_{key}");
                     return obj;
                 });
-            }
-            catch (Exception ex)
-            {
-                throw new LightCacheException(ex);
-            }
-            finally
-            {
-                telemetry.RemoveContext("Cache_Memory");
-            }
-        }
-
-        /// <summary>
-        /// Retrieves the specified object from cache, if the object does not exist, adds the result.
-        /// </summary>
-        /// <typeparam name="TObject">The type of the object.</typeparam>
-        /// <param name="key">The cache entry key.</param>
-        /// <param name="action">The action to be executed to add the object to cache.</param>
-        /// <param name="expirationDuration">Duration of the expiration.</param>
-        /// <returns>
-        /// the object in cache.
-        /// </returns>
-        public async Task<TObject> RetrieveOrAddAsync<TObject>(string key, Func<TObject> action, TimeSpan expirationDuration)
-        {
-            var telemetry = _telemetryFactory.GetTelemetry();
-            try
-            {
-                telemetry.AddContext("Cache_Memory");
-                telemetry.StartTelemetryStopWatchMetric($"{nameof(RetrieveOrAddAsync)}_{key}");
-                var obj = _cache.Get<TObject>(key);
-                if (obj == null)
-                {
-                    obj = action.Invoke();
-                    await AddAsync(key, obj, expirationDuration);
-                }
-                telemetry.CollectTelemetryStopWatchMetric($"{nameof(RetrieveOrAddAsync)}_{key}");
-                return obj;
             }
             catch (Exception ex)
             {
