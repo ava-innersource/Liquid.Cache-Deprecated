@@ -73,7 +73,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       run: |
-        dotnet sonarscanner begin /k:"Avanade_Liquid.Cache" /o:"avanade-1" /d:sonar.login="${{secrets.SONAR_TOKEN}}" /d:sonar.host.url="https://sonarcloud.io"
+        dotnet sonarscanner begin /k:"Avanade_Liquid.Cache" /o:"avanade-1" /d:sonar.login="${{secrets.SONAR_TOKEN}}" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.coverage.exclusions=src/Liquid.Cache/*
         dotnet build src/Liquid.Cache/Liquid.Cache.csproj --configuration Release --no-restore
         dotnet sonarscanner end /d:sonar.login="${{secrets.SONAR_TOKEN}}"
     - name: (CD) Nuget Pack & Push to Nuget.org
